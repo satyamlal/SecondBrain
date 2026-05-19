@@ -1,0 +1,85 @@
+[package]
+name = "secondbrain"
+version = "0.1.0"
+description = "SecondBrain — Personal Knowledge Manager & Notes App"
+authors = ["SecondBrain Dev Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.78"
+
+[lib]
+name = "secondbrain_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-http = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+
+# Async runtime — ALWAYS use tokio for Tauri async commands
+tokio = { version = "1", features = ["full"] }
+
+# Serialization — serde is mandatory for Tauri commands
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Database — async SQLite with compile-time query checking
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "chrono", "uuid", "migrate"] }
+
+# UUID generation
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for OAuth2 token exchange and URL metadata fetching
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# OAuth2 — Google OAuth2 PKCE flow
+oauth2 = "4"
+
+# URL parsing and validation
+url = "2"
+
+# Regex for URL categorization
+regex = "1"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Environment variables
+dotenvy = "0.15"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Hashing (for file deduplication)
+sha2 = "0.10"
+hex = "0.4"
+
+# Base64 (for thumbnail encoding)
+base64 = "0.22"
+
+# Keychain/secure storage for tokens
+keyring = "3"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
