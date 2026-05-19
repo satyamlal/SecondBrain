@@ -1,3 +1,39 @@
+# Environment Variables, Secrets & local development
+# .env.example IS tracked (template with empty values)
+# All actual .env files are ignored below:
+.env
+.env.local
+.env.test
+.env.*.local
+*.local
+dist-dev
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node Dependencies
+node_modules
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build Outputs
+dist
+dist-ssr
+src-tauri/target/
+src-tauri/src-tauri.log
+
+# Tauri Build & Cache
+src-tauri/.cargo/
+.next
+.vercel
+
+# Database Files (contains user data)
+*.db
+*.sqlite
+*.sqlite3
+src-tauri/*.db
+
 # Logs
 logs
 *.log
@@ -6,19 +42,57 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+debug.log
 
-node_modules
-dist
-dist-ssr
-*.local
+# OS Files
+.DS_Store
+Thumbs.db
+.desktop
+.Spotlight-V100
+.Trashes
+._*
 
-# Editor directories and files
+# IDE & Editor
 .vscode/*
 !.vscode/extensions.json
+!.vscode/launch.json
 .idea
+.history
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.sublime-workspace
+*.sublime-project
+*.iml
+.Rproj.user/
+.venv
+env/
+venv/
+
+# Development Tools
+.eslintcache
+.stylelintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Miscellaneous
+*.pem
+*.key
 .DS_Store
+.AppleDouble
+.LSOverride
+*.user
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.cache/
+.eslintrc.json.bak

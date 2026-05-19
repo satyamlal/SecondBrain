@@ -124,7 +124,7 @@ function MainLayout({ theme, toggleTheme }: MainLayoutProps) {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto p-8">
-          {currentPage === "dashboard" && <DashboardPage theme={theme} />}
+          {currentPage === "dashboard" && <DashboardPage theme={theme} onNavigate={setCurrentPage} />}
           {currentPage === "notes" && <NotesPage theme={theme} />}
           {currentPage === "links" && <LinksPage theme={theme} />}
           {currentPage === "media" && <MediaPage theme={theme} />}
@@ -140,7 +140,11 @@ interface PageProps {
   theme: Theme;
 }
 
-function DashboardPage({ theme }: PageProps) {
+interface DashboardPageProps extends PageProps {
+  onNavigate: (page: string) => void;
+}
+
+function DashboardPage({ theme, onNavigate }: DashboardPageProps) {
   const cardClass =
     theme === "dark"
       ? "bg-slate-900 border-slate-800 hover:border-slate-700"
@@ -151,16 +155,17 @@ function DashboardPage({ theme }: PageProps) {
       <h3 className="text-lg font-semibold mb-6">Quick Add</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
-          { icon: "📝", label: "New Note", action: "note" },
-          { icon: "🔗", label: "Save Link", action: "link" },
+          { icon: "📝", label: "New Note", action: "notes" },
+          { icon: "🔗", label: "Save Link", action: "links" },
           { icon: "🖼️", label: "Add Media", action: "media" },
           { icon: "🧠", label: "Create Mindmap", action: "mindmap" },
-          { icon: "📋", label: "Quick Capture", action: "capture" },
-          { icon: "🏷️", label: "Browse Tags", action: "tags" },
+          { icon: "📋", label: "Quick Capture", action: "notes" },
+          { icon: "🏷️", label: "Browse Tags", action: "notes" },
         ].map(({ icon, label, action }) => (
           <button
             key={action}
-            className={`p-6 border rounded-lg transition text-center cursor-pointer ${cardClass}`}
+            onClick={() => onNavigate(action)}
+            className={`p-6 border rounded-lg transition text-center cursor-pointer hover:shadow-lg ${cardClass}`}
           >
             <div className="text-3xl mb-2">{icon}</div>
             <div className="text-sm font-medium">{label}</div>
@@ -179,51 +184,478 @@ function DashboardPage({ theme }: PageProps) {
 }
 
 function NotesPage({ theme }: PageProps) {
+  const [notes, setNotes] = useState<{ id: string; title: string; content: string; date: string }[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const inputClass =
+    theme === "dark"
+      ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+      : "bg-white border-slate-300 text-slate-900 placeholder-slate-400";
+  const containerClass =
+    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
+
+  const handleAddNote = () => {
+    if (newTitle.trim() || newNote.trim()) {
+      const note = {
+        id: Date.now().toString(),
+        title: newTitle || "Untitled Note",
+        content: newNote,
+        date: new Date().toLocaleDateString(),
+      };
+      setNotes([note, ...notes]);
+      setNewNote("");
+      setNewTitle("");
+    }
+  };
+
+  const handleDeleteNote = (id: string) => {
+    setNotes(notes.filter(n => n.id !== id));
+  };
+
   return (
-    <div>
-      <p className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
-        Notes section coming soon...
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Create New Note</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <input
+            type="text"
+            placeholder="Note title..."
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className={`w-full p-3 border rounded-lg outline-none focus:border-blue-500 ${inputClass}`}
+          />
+          <textarea
+            placeholder="Write your note here..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            rows={5}
+            className={`w-full p-3 border rounded-lg outline-none focus:border-blue-500 resize-none ${inputClass}`}
+          />
+          <button
+            onClick={handleAddNote}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
+          >
+            Save Note
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Your Notes ({notes.length})</h3>
+        {notes.length === 0 ? (
+          <div className={`p-8 border rounded-lg ${containerClass} text-center text-slate-500`}>
+            <p>No notes yet. Create your first note above!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {notes.map(note => (
+              <div key={note.id} className={`p-4 border rounded-lg ${containerClass}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-semibold">{note.title}</h4>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm mb-2 line-clamp-3">{note.content}</p>
+                <p className="text-xs text-slate-500">{note.date}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function LinksPage({ theme }: PageProps) {
+  const [links, setLinks] = useState<{ id: string; url: string; title: string; category: string; date: string }[]>([]);
+  const [newUrl, setNewUrl] = useState("");
+  const inputClass =
+    theme === "dark"
+      ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+      : "bg-white border-slate-300 text-slate-900 placeholder-slate-400";
+  const containerClass =
+    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
+
+  const getCategoryFromUrl = (url: string): string => {
+    const domains: { [key: string]: string } = {
+      instagram: "Instagram",
+      youtube: "YouTube",
+      pinterest: "Pinterest",
+      reddit: "Reddit",
+      medium: "Medium",
+      github: "GitHub",
+      twitter: "Twitter",
+      linkedin: "LinkedIn",
+    };
+    for (const [domain, category] of Object.entries(domains)) {
+      if (url.toLowerCase().includes(domain)) return category;
+    }
+    return "Web";
+  };
+
+  const handleAddLink = () => {
+    if (newUrl.trim()) {
+      try {
+        const urlObj = new URL(newUrl.startsWith("http") ? newUrl : `https://${newUrl}`);
+        const link = {
+          id: Date.now().toString(),
+          url: urlObj.href,
+          title: urlObj.hostname,
+          category: getCategoryFromUrl(urlObj.href),
+          date: new Date().toLocaleDateString(),
+        };
+        setLinks([link, ...links]);
+        setNewUrl("");
+      } catch {
+        alert("Please enter a valid URL");
+      }
+    }
+  };
+
+  const handleDeleteLink = (id: string) => {
+    setLinks(links.filter(l => l.id !== id));
+  };
+
   return (
-    <div>
-      <p className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
-        Links section coming soon...
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Save a Link</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <input
+            type="url"
+            placeholder="https://example.com"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleAddLink()}
+            className={`w-full p-3 border rounded-lg outline-none focus:border-blue-500 ${inputClass}`}
+          />
+          <button
+            onClick={handleAddLink}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
+          >
+            Save Link
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Saved Links ({links.length})</h3>
+        {links.length === 0 ? (
+          <div className={`p-8 border rounded-lg ${containerClass} text-center text-slate-500`}>
+            <p>No links saved yet. Start saving links above!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {links.map(link => (
+              <div key={link.id} className={`p-4 border rounded-lg ${containerClass} hover:shadow-md transition`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">{link.category}</span>
+                      <p className="text-sm text-slate-500">{link.date}</p>
+                    </div>
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline truncate block">
+                      {link.title}
+                    </a>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteLink(link.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function MediaPage({ theme }: PageProps) {
+  const [media, setMedia] = useState<{ id: string; name: string; type: string; date: string; note: string }[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const containerClass =
+    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
+  const inputClass =
+    theme === "dark"
+      ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+      : "bg-white border-slate-300 text-slate-900 placeholder-slate-400";
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.currentTarget.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const mediaItem = {
+          id: Date.now().toString() + Math.random(),
+          name: file.name,
+          type: file.type.split("/")[0],
+          date: new Date().toLocaleDateString(),
+          note: newNote,
+        };
+        setMedia([mediaItem, ...media]);
+      });
+      setNewNote("");
+      e.currentTarget.value = "";
+    }
+  };
+
+  const handleDeleteMedia = (id: string) => {
+    setMedia(media.filter(m => m.id !== id));
+  };
+
   return (
-    <div>
-      <p className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
-        Media gallery coming soon...
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Upload Media</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:bg-slate-800 transition">
+            <input
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="media-upload"
+            />
+            <label htmlFor="media-upload" className="cursor-pointer">
+              <p className="text-2xl mb-2">📸 📹</p>
+              <p className="text-sm text-slate-400">Click to upload images or videos</p>
+            </label>
+          </div>
+          <textarea
+            placeholder="Add a note about this media (optional)..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            rows={3}
+            className={`w-full p-3 border rounded-lg outline-none focus:border-blue-500 resize-none ${inputClass}`}
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Media Library ({media.length})</h3>
+        {media.length === 0 ? (
+          <div className={`p-8 border rounded-lg ${containerClass} text-center text-slate-500`}>
+            <p>No media uploaded yet. Start uploading images or videos above!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {media.map(item => (
+              <div key={item.id} className={`p-4 border rounded-lg ${containerClass}`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">{item.type === "image" ? "🖼️" : "🎬"}</span>
+                      <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded uppercase">{item.type}</span>
+                    </div>
+                    <p className="text-sm font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-slate-500">{item.date}</p>
+                    {item.note && <p className="text-xs mt-2 text-slate-400">{item.note}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteMedia(item.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function MindmapPage({ theme }: PageProps) {
+  const [mindmaps, setMindmaps] = useState<{ id: string; title: string; nodes: number; date: string }[]>([]);
+  const [newTitle, setNewTitle] = useState("");
+  const containerClass =
+    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
+  const inputClass =
+    theme === "dark"
+      ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+      : "bg-white border-slate-300 text-slate-900 placeholder-slate-400";
+
+  const handleCreateMindmap = () => {
+    if (newTitle.trim()) {
+      const mindmap = {
+        id: Date.now().toString(),
+        title: newTitle,
+        nodes: 1,
+        date: new Date().toLocaleDateString(),
+      };
+      setMindmaps([mindmap, ...mindmaps]);
+      setNewTitle("");
+    }
+  };
+
+  const handleDeleteMindmap = (id: string) => {
+    setMindmaps(mindmaps.filter(m => m.id !== id));
+  };
+
   return (
-    <div>
-      <p className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
-        Mindmap editor coming soon...
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Create New Mindmap</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <input
+            type="text"
+            placeholder="Mindmap title (e.g., 'Project Planning', 'Learning Path')..."
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleCreateMindmap()}
+            className={`w-full p-3 border rounded-lg outline-none focus:border-blue-500 ${inputClass}`}
+          />
+          <button
+            onClick={handleCreateMindmap}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
+          >
+            Create Mindmap
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Your Mindmaps ({mindmaps.length})</h3>
+        {mindmaps.length === 0 ? (
+          <div className={`p-8 border rounded-lg ${containerClass} text-center text-slate-500`}>
+            <p>No mindmaps yet. Create your first mindmap above!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mindmaps.map(mindmap => (
+              <div key={mindmap.id} className={`p-4 border rounded-lg ${containerClass} hover:shadow-md transition cursor-pointer`}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">🧠</span>
+                      <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">{mindmap.nodes} nodes</span>
+                    </div>
+                    <h4 className="font-semibold">{mindmap.title}</h4>
+                    <p className="text-xs text-slate-500">{mindmap.date}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteMindmap(mindmap.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="mt-3 h-32 border border-slate-700 rounded bg-opacity-50 flex items-center justify-center text-slate-600 text-sm">
+                  [Mindmap Canvas]
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function SettingsPage({ theme }: PageProps) {
+  const [settings, setSettings] = useState({
+    darkMode: theme === "dark",
+    notifications: true,
+    autoSync: true,
+    defaultCategory: "General",
+  });
+  const containerClass =
+    theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
+
+  const handleToggle = (key: string) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
-    <div>
-      <p className={theme === "dark" ? "text-slate-400" : "text-slate-600"}>
-        Settings page coming soon...
-      </p>
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Preferences</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium">Dark Mode</label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.darkMode}
+                onChange={() => handleToggle("darkMode")}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+            </label>
+          </div>
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium">Notifications</label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.notifications}
+                onChange={() => handleToggle("notifications")}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+            </label>
+          </div>
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium">Auto Sync</label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.autoSync}
+                onChange={() => handleToggle("autoSync")}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Account</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <div>
+            <label className="text-sm font-medium block mb-2">Email</label>
+            <p className="text-sm text-slate-500">Not logged in yet</p>
+          </div>
+          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition">
+            Sign in with Gmail
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Storage</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-4`}>
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-sm font-medium">Used Space</label>
+            <p className="text-sm">0 MB / Unlimited</p>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-2" />
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <button className="p-2 border border-slate-700 rounded hover:bg-slate-800 transition">Export Data</button>
+            <button className="p-2 border border-slate-700 rounded hover:bg-slate-800 transition">Clear Cache</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-4">About</h3>
+        <div className={`p-6 border rounded-lg ${containerClass} space-y-2 text-sm`}>
+          <p>SecondBrain v0.1.0</p>
+          <p className="text-slate-500">Your personal knowledge management system</p>
+          <a href="#" className="text-blue-500 hover:underline">View License</a>
+        </div>
+      </div>
     </div>
   );
 }
