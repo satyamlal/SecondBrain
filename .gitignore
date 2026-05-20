@@ -96,3 +96,5 @@ venv/
 *.sw?
 .cache/
 .eslintrc.json.bak
+*.md
+*.txt
