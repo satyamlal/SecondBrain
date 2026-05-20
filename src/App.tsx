@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
+import { NotesStorage, LinksStorage, MediaStorage, MindmapsStorage } from "./storage";
+import type { Note, Link, Media, Mindmap } from "./storage";
 
-// Theme context
 type Theme = "dark" | "light";
+type PageType = "dashboard" | "notes" | "links" | "media" | "mindmap" | "settings";
 
 interface ThemeContextType {
   theme: Theme;
@@ -25,16 +27,13 @@ function App() {
     </ThemeContext.Provider>
   );
 }
-
 interface MainLayoutProps {
   theme: Theme;
   toggleTheme: () => void;
 }
 
 function MainLayout({ theme, toggleTheme }: MainLayoutProps) {
-  const [currentPage, setCurrentPage] = useState<"dashboard" | "notes" | "links" | "media" | "mindmap" | "settings">(
-    "dashboard"
-  );
+  const [currentPage, setCurrentPage] = useState<PageType>("dashboard");
 
   const bgClass = theme === "dark" ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900";
   const sidebarClass =
@@ -141,7 +140,7 @@ interface PageProps {
 }
 
 interface DashboardPageProps extends PageProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: PageType) => void;
 }
 
 function DashboardPage({ theme, onNavigate }: DashboardPageProps) {
@@ -150,18 +149,20 @@ function DashboardPage({ theme, onNavigate }: DashboardPageProps) {
       ? "bg-slate-900 border-slate-800 hover:border-slate-700"
       : "bg-slate-50 border-slate-200 hover:border-slate-300";
 
+  const buttons: Array<{ icon: string; label: string; action: PageType }> = [
+    { icon: "📝", label: "New Note", action: "notes" },
+    { icon: "🔗", label: "Save Link", action: "links" },
+    { icon: "🖼️", label: "Add Media", action: "media" },
+    { icon: "🧠", label: "Create Mindmap", action: "mindmap" },
+    { icon: "📋", label: "Quick Capture", action: "notes" },
+    { icon: "🏷️", label: "Browse Tags", action: "notes" },
+  ];
+
   return (
     <div>
       <h3 className="text-lg font-semibold mb-6">Quick Add</h3>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {[
-          { icon: "📝", label: "New Note", action: "notes" },
-          { icon: "🔗", label: "Save Link", action: "links" },
-          { icon: "🖼️", label: "Add Media", action: "media" },
-          { icon: "🧠", label: "Create Mindmap", action: "mindmap" },
-          { icon: "📋", label: "Quick Capture", action: "notes" },
-          { icon: "🏷️", label: "Browse Tags", action: "notes" },
-        ].map(({ icon, label, action }) => (
+        {buttons.map(({ icon, label, action }) => (
           <button
             key={action}
             onClick={() => onNavigate(action)}
@@ -184,9 +185,18 @@ function DashboardPage({ theme, onNavigate }: DashboardPageProps) {
 }
 
 function NotesPage({ theme }: PageProps) {
-  const [notes, setNotes] = useState<{ id: string; title: string; content: string; date: string }[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Load notes from localStorage on component mount
+    const savedNotes = NotesStorage.getAll();
+    setNotes(savedNotes);
+    setLoading(false);
+  }, []);
+
   const inputClass =
     theme === "dark"
       ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
@@ -196,21 +206,30 @@ function NotesPage({ theme }: PageProps) {
 
   const handleAddNote = () => {
     if (newTitle.trim() || newNote.trim()) {
-      const note = {
+      const note: Note = {
         id: Date.now().toString(),
         title: newTitle || "Untitled Note",
         content: newNote,
         date: new Date().toLocaleDateString(),
+        createdAt: Date.now(),
       };
-      setNotes([note, ...notes]);
+      const updatedNotes = [note, ...notes];
+      setNotes(updatedNotes);
+      NotesStorage.add(note);
       setNewNote("");
       setNewTitle("");
     }
   };
 
   const handleDeleteNote = (id: string) => {
-    setNotes(notes.filter(n => n.id !== id));
+    const updatedNotes = notes.filter(n => n.id !== id);
+    setNotes(updatedNotes);
+    NotesStorage.delete(id);
   };
+
+  if (loading) {
+    return <div className="text-center text-slate-500">Loading notes...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -271,8 +290,16 @@ function NotesPage({ theme }: PageProps) {
 }
 
 function LinksPage({ theme }: PageProps) {
-  const [links, setLinks] = useState<{ id: string; url: string; title: string; category: string; date: string }[]>([]);
+  const [links, setLinks] = useState<Link[]>([]);
   const [newUrl, setNewUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const savedLinks = LinksStorage.getAll();
+    setLinks(savedLinks);
+    setLoading(false);
+  }, []);
+
   const inputClass =
     theme === "dark"
       ? "bg-slate-800 border-slate-700 text-white placeholder-slate-500"
@@ -301,14 +328,17 @@ function LinksPage({ theme }: PageProps) {
     if (newUrl.trim()) {
       try {
         const urlObj = new URL(newUrl.startsWith("http") ? newUrl : `https://${newUrl}`);
-        const link = {
+        const link: Link = {
           id: Date.now().toString(),
           url: urlObj.href,
           title: urlObj.hostname,
           category: getCategoryFromUrl(urlObj.href),
           date: new Date().toLocaleDateString(),
+          createdAt: Date.now(),
         };
-        setLinks([link, ...links]);
+        const updatedLinks = [link, ...links];
+        setLinks(updatedLinks);
+        LinksStorage.add(link);
         setNewUrl("");
       } catch {
         alert("Please enter a valid URL");
@@ -317,8 +347,14 @@ function LinksPage({ theme }: PageProps) {
   };
 
   const handleDeleteLink = (id: string) => {
-    setLinks(links.filter(l => l.id !== id));
+    const updatedLinks = links.filter(l => l.id !== id);
+    setLinks(updatedLinks);
+    LinksStorage.delete(id);
   };
+
+  if (loading) {
+    return <div className="text-center text-slate-500">Loading links...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -379,8 +415,16 @@ function LinksPage({ theme }: PageProps) {
 }
 
 function MediaPage({ theme }: PageProps) {
-  const [media, setMedia] = useState<{ id: string; name: string; type: string; date: string; note: string }[]>([]);
+  const [media, setMedia] = useState<Media[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const savedMedia = MediaStorage.getAll();
+    setMedia(savedMedia);
+    setLoading(false);
+  }, []);
+
   const containerClass =
     theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
   const inputClass =
@@ -392,14 +436,16 @@ function MediaPage({ theme }: PageProps) {
     const files = e.currentTarget.files;
     if (files) {
       Array.from(files).forEach(file => {
-        const mediaItem = {
+        const mediaItem: Media = {
           id: Date.now().toString() + Math.random(),
           name: file.name,
-          type: file.type.split("/")[0],
+          type: file.type.split("/")[0] as "image" | "video",
           date: new Date().toLocaleDateString(),
           note: newNote,
+          createdAt: Date.now(),
         };
-        setMedia([mediaItem, ...media]);
+        setMedia(prev => [mediaItem, ...prev]);
+        MediaStorage.add(mediaItem);
       });
       setNewNote("");
       e.currentTarget.value = "";
@@ -407,8 +453,14 @@ function MediaPage({ theme }: PageProps) {
   };
 
   const handleDeleteMedia = (id: string) => {
-    setMedia(media.filter(m => m.id !== id));
+    const updatedMedia = media.filter(m => m.id !== id);
+    setMedia(updatedMedia);
+    MediaStorage.delete(id);
   };
+
+  if (loading) {
+    return <div className="text-center text-slate-500">Loading media...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -476,8 +528,16 @@ function MediaPage({ theme }: PageProps) {
 }
 
 function MindmapPage({ theme }: PageProps) {
-  const [mindmaps, setMindmaps] = useState<{ id: string; title: string; nodes: number; date: string }[]>([]);
+  const [mindmaps, setMindmaps] = useState<Mindmap[]>([]);
   const [newTitle, setNewTitle] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const savedMindmaps = MindmapsStorage.getAll();
+    setMindmaps(savedMindmaps);
+    setLoading(false);
+  }, []);
+
   const containerClass =
     theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
   const inputClass =
@@ -487,20 +547,29 @@ function MindmapPage({ theme }: PageProps) {
 
   const handleCreateMindmap = () => {
     if (newTitle.trim()) {
-      const mindmap = {
+      const mindmap: Mindmap = {
         id: Date.now().toString(),
         title: newTitle,
         nodes: 1,
         date: new Date().toLocaleDateString(),
+        createdAt: Date.now(),
       };
-      setMindmaps([mindmap, ...mindmaps]);
+      const updatedMindmaps = [mindmap, ...mindmaps];
+      setMindmaps(updatedMindmaps);
+      MindmapsStorage.add(mindmap);
       setNewTitle("");
     }
   };
 
   const handleDeleteMindmap = (id: string) => {
-    setMindmaps(mindmaps.filter(m => m.id !== id));
+    const updatedMindmaps = mindmaps.filter(m => m.id !== id);
+    setMindmaps(updatedMindmaps);
+    MindmapsStorage.delete(id);
   };
+
+  if (loading) {
+    return <div className="text-center text-slate-500">Loading mindmaps...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -563,16 +632,20 @@ function MindmapPage({ theme }: PageProps) {
 }
 
 function SettingsPage({ theme }: PageProps) {
-  const [settings, setSettings] = useState({
+  type SettingsKeys = keyof typeof initialSettings;
+  
+  const initialSettings = {
     darkMode: theme === "dark",
     notifications: true,
     autoSync: true,
     defaultCategory: "General",
-  });
+  };
+
+  const [settings, setSettings] = useState(initialSettings);
   const containerClass =
     theme === "dark" ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200";
 
-  const handleToggle = (key: string) => {
+  const handleToggle = (key: SettingsKeys) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
